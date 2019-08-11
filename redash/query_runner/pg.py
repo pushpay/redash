@@ -312,6 +312,7 @@ class CockroachDB(PostgreSQL):
     def type(cls):
         return "cockroach"
 
+
 register(PostgreSQL)
 register(Redshift)
 register(CockroachDB)
