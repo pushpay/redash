@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2.extras import Range
 
 from redash.query_runner import *
+from redash.settings import QUERY_RESULTS_MAX_ROWS
 from redash.utils import JSONEncoder, json_dumps, json_loads
 
 logger = logging.getLogger(__name__)
@@ -189,18 +190,24 @@ class PostgreSQL(BaseSQLQueryRunner):
             _wait(connection)
 
             if cursor.description is not None:
-                columns = self.fetch_columns([(i[0], types_map.get(i[1], None))
-                                              for i in cursor.description])
-                rows = [
-                    dict(zip((c['name'] for c in columns), row))
-                    for row in cursor
-                ]
+                if QUERY_RESULTS_MAX_ROWS != -1 and cursor.rowcount > QUERY_RESULTS_MAX_ROWS:
+                    json_data = None
+                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}".format(
+                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS
+                    )
+                else:
+                    columns = self.fetch_columns([(i[0], types_map.get(i[1], None))
+                                                  for i in cursor.description])
+                    rows = [
+                        dict(zip((c['name'] for c in columns), row))
+                        for row in cursor
+                    ]
 
-                data = {'columns': columns, 'rows': rows}
-                error = None
-                json_data = json_dumps(data,
-                                       ignore_nan=True,
-                                       cls=PostgreSQLJSONEncoder)
+                    data = {'columns': columns, 'rows': rows}
+                    error = None
+                    json_data = json_dumps(data,
+                                           ignore_nan=True,
+                                           cls=PostgreSQLJSONEncoder)
             else:
                 error = 'Query completed but it returned no data.'
                 json_data = None
@@ -282,7 +289,7 @@ class Redshift(PostgreSQL):
             "required": ["dbname", "user", "password", "host", "port"],
             "secret": ["password"]
         }
-        
+
     def annotate_query(self, query, metadata):
         annotated = super(Redshift, self).annotate_query(query, metadata)
 
@@ -290,11 +297,11 @@ class Redshift(PostgreSQL):
             query_group = self.configuration.get('scheduled_query_group')
         else:
             query_group = self.configuration.get('adhoc_query_group')
-        
+
         if query_group:
             set_query_group = 'set query_group to {};'.format(query_group)
             annotated = '{}\n{}'.format(set_query_group, annotated)
-        
+
         return annotated
 
     def _get_tables(self, schema):

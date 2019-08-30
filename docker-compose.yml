@@ -35,6 +35,7 @@ services:
       REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
       QUEUES: "queries,scheduled_queries,celery,schemas"
       WORKERS_COUNT: 2
+      QUERY_RESULTS_MAX_ROWS: 50000
   redis:
     image: redis:3-alpine
     restart: unless-stopped
