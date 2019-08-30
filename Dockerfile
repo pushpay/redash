@@ -2,7 +2,7 @@ FROM node:10 as frontend-builder
 
 WORKDIR /frontend
 COPY package.json package-lock.json /frontend/
-RUN npm install
+RUN npm ci
 
 COPY . /frontend
 RUN npm run build
