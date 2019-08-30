@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2.extras import Range
 
 from redash.query_runner import *
+from redash.settings import QUERY_RESULTS_MAX_ROWS
 from redash.utils import JSONEncoder, json_dumps, json_loads
 
 logger = logging.getLogger(__name__)
@@ -181,6 +182,12 @@ class PostgreSQL(BaseSQLQueryRunner):
             _wait(connection)
 
             if cursor.description is not None:
+                if QUERY_RESULTS_MAX_ROWS != -1 and cursor.rowcount > QUERY_RESULTS_MAX_ROWS:
+                    json_data = None
+                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}".format(
+                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS
+                    )
+
                 columns = self.fetch_columns([(i[0], types_map.get(i[1], None)) for i in cursor.description])
                 rows = [dict(zip((c['name'] for c in columns), row)) for row in cursor]
 
