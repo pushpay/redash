@@ -1,6 +1,5 @@
 import time
 
-import sqlalchemy
 from flask.cli import AppGroup
 from flask_migrate import stamp
 import sqlalchemy
