@@ -118,6 +118,8 @@ def enqueue_query(
 
         except redis.WatchError:
             continue
+        finally:
+            pipe.reset()
 
     if not job:
         logger.error("[Manager][%s] Failed adding job for query.", query_hash)
