@@ -20,6 +20,7 @@ from redash.query_runner import (
     JobTimeoutException,
     register,
 )
+from redash.settings import QUERY_RESULTS_MAX_ROWS
 
 logger = logging.getLogger(__name__)
 
