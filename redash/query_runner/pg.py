@@ -10,6 +10,7 @@ import psycopg2
 from psycopg2.extras import Range
 
 from redash.query_runner import *
+from redash.settings import QUERY_RESULTS_MAX_ROWS
 from redash.utils import JSONEncoder, json_dumps, json_loads
 
 logger = logging.getLogger(__name__)
