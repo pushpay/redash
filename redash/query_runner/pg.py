@@ -274,11 +274,17 @@ class PostgreSQL(BaseSQLQueryRunner):
             _wait(connection)
 
             if cursor.description is not None:
-                columns = self.fetch_columns([(i[0], types_map.get(i[1], None)) for i in cursor.description])
-                rows = [dict(zip((column["name"] for column in columns), row)) for row in cursor]
+                if QUERY_RESULTS_MAX_ROWS != -1 and cursor.rowcount > QUERY_RESULTS_MAX_ROWS:
+                    data = None
+                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}".format(
+                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS
+                    )
+                else:
+                    columns = self.fetch_columns([(i[0], types_map.get(i[1], None)) for i in cursor.description])
+                    rows = [dict(zip((column["name"] for column in columns), row)) for row in cursor]
 
-                data = {"columns": columns, "rows": rows}
-                error = None
+                    data = {"columns": columns, "rows": rows}
+                    error = None
             else:
                 error = "Query completed but it returned no data."
                 data = None
