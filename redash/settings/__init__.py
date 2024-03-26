@@ -56,6 +56,9 @@ QUERY_RESULTS_CLEANUP_MAX_AGE = int(
     os.environ.get("REDASH_QUERY_RESULTS_CLEANUP_MAX_AGE", "7")
 )
 
+# Prevents Redash from loading any results that exceed the maximum row count
+QUERY_RESULTS_MAX_ROWS = int(os.environ.get("REDASH_QUERY_RESULTS_MAX_ROWS", "-1"))
+
 SCHEMAS_REFRESH_SCHEDULE = int(os.environ.get("REDASH_SCHEMAS_REFRESH_SCHEDULE", 30))
 
 AUTH_TYPE = os.environ.get("REDASH_AUTH_TYPE", "api_key")
