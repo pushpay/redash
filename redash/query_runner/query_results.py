@@ -1,3 +1,4 @@
+import datetime
 import decimal
 import hashlib
 import logging
@@ -110,6 +111,8 @@ def flatten(value):
         return json_dumps(value)
     elif isinstance(value, decimal.Decimal):
         return float(value)
+    elif isinstance(value, datetime.timedelta):
+        return str(value)
     else:
         return value
 
