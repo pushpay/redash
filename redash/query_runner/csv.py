@@ -1,14 +1,10 @@
 import io
 import logging
 
+import requests
 import yaml
 
 from redash.query_runner import BaseQueryRunner, NotSupported, register
-from redash.utils import json_dumps
-from redash.utils.requests_session import (
-    UnacceptableAddressException,
-    requests_or_advocate,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +56,7 @@ class CSV(BaseQueryRunner):
             pass
 
         try:
-            response = requests_or_advocate.get(url=path, headers={"User-agent": ua})
+            response = requests.get(url=path, headers={"User-agent": ua})
             workbook = pd.read_csv(io.BytesIO(response.content), sep=",", **args)
 
             df = workbook.copy()
@@ -96,19 +92,15 @@ class CSV(BaseQueryRunner):
                         break
             data["rows"] = df[labels].replace({np.nan: None}).to_dict(orient="records")
 
-            json_data = json_dumps(data)
             error = None
         except KeyboardInterrupt:
             error = "Query cancelled by user."
-            json_data = None
-        except UnacceptableAddressException:
-            error = "Can't query private addresses."
-            json_data = None
+            data = None
         except Exception as e:
             error = "Error reading {0}. {1}".format(path, str(e))
-            json_data = None
+            data = None
 
-        return json_data, error
+        return data, error
 
     def get_schema(self):
         raise NotSupported()

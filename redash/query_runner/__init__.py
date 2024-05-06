@@ -3,18 +3,13 @@ from collections import defaultdict
 from contextlib import ExitStack
 from functools import wraps
 
+import requests
 import sqlparse
 from dateutil import parser
 from rq.timeouts import JobTimeoutException
 from sshtunnel import open_tunnel
 
 from redash import settings, utils
-from redash.utils import json_loads
-from redash.utils.requests_session import (
-    UnacceptableAddressException,
-    requests_or_advocate,
-    requests_session,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -232,12 +227,19 @@ class BaseQueryRunner:
     def get_schema(self, get_stats=False):
         raise NotSupported()
 
+    def _handle_run_query_error(self, error):
+        if error is None:
+            return
+
+        logger.error(error)
+        raise Exception(f"Error during query execution. Reason: {error}")
+
     def _run_query_internal(self, query):
         results, error = self.run_query(query, None)
 
         if error is not None:
             raise Exception("Failed running query [%s]." % query)
-        return json_loads(results)["rows"]
+        return results["rows"]
 
     @classmethod
     def to_dict(cls):
@@ -373,7 +375,7 @@ class BaseHTTPQueryRunner(BaseQueryRunner):
         error = None
         response = None
         try:
-            response = requests_session.request(http_method, url, auth=auth, **kwargs)
+            response = requests.request(http_method, url, auth=auth, **kwargs)
             # Raise a requests HTTP exception with the appropriate reason
             # for 4xx and 5xx response status codes which is later caught
             # and passed back.
@@ -383,14 +385,11 @@ class BaseHTTPQueryRunner(BaseQueryRunner):
             if response.status_code != 200:
                 error = "{} ({}).".format(self.response_error, response.status_code)
 
-        except requests_or_advocate.HTTPError as exc:
+        except requests.HTTPError as exc:
             logger.exception(exc)
             error = "Failed to execute query. "
             f"Return Code: {response.status_code} Reason: {response.text}"
-        except UnacceptableAddressException as exc:
-            logger.exception(exc)
-            error = "Can't query private addresses."
-        except requests_or_advocate.RequestException as exc:
+        except requests.RequestException as exc:
             # Catch all other requests exceptions and return the error.
             logger.exception(exc)
             error = str(exc)
