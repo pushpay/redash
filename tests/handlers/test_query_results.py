@@ -1,5 +1,3 @@
-from rq.job import JobStatus
-
 from redash.handlers.query_results import error_messages, run_query
 from redash.models import db
 from redash.utils import json_dumps
@@ -437,6 +435,9 @@ class TestQueryResultExcelResponse(BaseTestCase):
 
 class TestJobResource(BaseTestCase):
     def test_cancels_queued_queries(self):
+        QUEUED = 1
+        FAILED = 4
+
         query = self.factory.create_query()
         job_id = self.make_request(
             "post",
@@ -447,9 +448,10 @@ class TestJobResource(BaseTestCase):
         ]["id"]
 
         status = self.make_request("get", f"/api/jobs/{job_id}").json["job"]["status"]
-        self.assertEqual(status, JobStatus.QUEUED)
+        self.assertEqual(status, QUEUED)
 
         self.make_request("delete", f"/api/jobs/{job_id}")
 
         job = self.make_request("get", f"/api/jobs/{job_id}").json["job"]
-        self.assertEqual(job["status"], JobStatus.CANCELED)
+        self.assertEqual(job["status"], FAILED)
+        self.assertTrue("cancelled" in job["error"])
