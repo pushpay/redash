@@ -200,7 +200,9 @@ class PostgreSQL(BaseSQLQueryRunner):
         results, error = self.run_query(query, None)
 
         if error is not None:
-            self._handle_run_query_error(error)
+            raise Exception(f"Failed getting schema - {str(error)}")
+
+        results = json_loads(results)
 
         build_schema(results, schema)
 
