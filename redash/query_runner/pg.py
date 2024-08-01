@@ -10,7 +10,7 @@ import psycopg2
 from psycopg2.extras import Range
 
 from redash.query_runner import *
-from redash.settings import QUERY_RESULTS_MAX_ROWS
+from redash.settings import QUERY_RESULTS_MAX_ROWS, QUERY_RESULTS_MAX_ROWS_CONFLUENCE
 from redash.utils import JSONEncoder, json_dumps, json_loads
 
 logger = logging.getLogger(__name__)
@@ -264,8 +264,8 @@ class PostgreSQL(BaseSQLQueryRunner):
             if cursor.description is not None:
                 if QUERY_RESULTS_MAX_ROWS != -1 and cursor.rowcount > QUERY_RESULTS_MAX_ROWS:
                     json_data = None
-                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}".format(
-                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS
+                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}.<br />See <a href=\"https://pushpay.atlassian.net/wiki/spaces/{2}\" target=\"_blank\">Confluence {2}</a> for more information".format(
+                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS, QUERY_RESULTS_MAX_ROWS_CONFLUENCE
                     )
                 else:
                     columns = self.fetch_columns(
