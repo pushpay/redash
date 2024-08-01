@@ -15,6 +15,7 @@ from redash import settings
 from redash.utils.configuration import ConfigurationContainer
 from redash.models.types import (
     EncryptedConfiguration,
+    Configuration,
     MutableDict,
     MutableList,
     PseudoJSON,
@@ -45,14 +46,7 @@ def upgrade():
                 )
             ),
         ),
-        sa.Column(
-            "options",
-            ConfigurationContainer.as_mutable(
-                EncryptedConfiguration(
-                    sa.Text, settings.DATASOURCE_SECRET_KEY, FernetEngine
-                )
-            ),
-        ),
+        sa.Column("options", ConfigurationContainer.as_mutable(Configuration)),
     )
 
     conn = op.get_bind()
