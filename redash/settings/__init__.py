@@ -52,6 +52,8 @@ QUERY_RESULTS_EXPIRED_TTL = int(os.environ.get("REDASH_QUERY_RESULTS_EXPIRED_TTL
 # Prevents Redash from loading any results that exceed the maximum row count
 QUERY_RESULTS_MAX_ROWS = int(os.environ.get("REDASH_QUERY_RESULTS_MAX_ROWS", "-1"))
 
+QUERY_RESULTS_MAX_ROWS_CONFLUENCE = os.environ.get("QUERY_RESULTS_MAX_ROWS_CONFLUENCE", ".")
+
 SCHEMAS_REFRESH_SCHEDULE = int(os.environ.get("REDASH_SCHEMAS_REFRESH_SCHEDULE", 30))
 SCHEMAS_REFRESH_TIMEOUT = int(os.environ.get("REDASH_SCHEMAS_REFRESH_TIMEOUT", 300))
 
