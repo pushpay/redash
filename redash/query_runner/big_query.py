@@ -7,6 +7,7 @@ from base64 import b64decode
 from redash import settings
 from redash.query_runner import (
     TYPE_BOOLEAN,
+    TYPE_DATE,
     TYPE_DATETIME,
     TYPE_FLOAT,
     TYPE_INTEGER,
@@ -16,7 +17,7 @@ from redash.query_runner import (
     JobTimeoutException,
     register,
 )
-from redash.utils import json_dumps, json_loads
+from redash.utils import json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,8 @@ types_map = {
     "BOOLEAN": TYPE_BOOLEAN,
     "STRING": TYPE_STRING,
     "TIMESTAMP": TYPE_DATETIME,
+    "DATETIME": TYPE_DATETIME,
+    "DATE": TYPE_DATE,
 }
 
 
@@ -100,7 +103,7 @@ class BigQuery(BaseQueryRunner):
 
     def __init__(self, configuration):
         super().__init__(configuration)
-        self.should_annotate_query = configuration["useQueryAnnotation"]
+        self.should_annotate_query = configuration.get("useQueryAnnotation", False)
 
     @classmethod
     def enabled(cls):
@@ -301,8 +304,8 @@ class BigQuery(BaseQueryRunner):
         datasets = self._get_project_datasets(project_id)
 
         query_base = """
-        SELECT table_schema, table_name, column_name
-        FROM `{dataset_id}`.INFORMATION_SCHEMA.COLUMNS
+        SELECT table_schema, table_name, field_path
+        FROM `{dataset_id}`.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS
         WHERE table_schema NOT IN ('information_schema')
         """
 
@@ -318,12 +321,11 @@ class BigQuery(BaseQueryRunner):
         if error is not None:
             self._handle_run_query_error(error)
 
-        results = json_loads(results)
         for row in results["rows"]:
             table_name = "{0}.{1}".format(row["table_schema"], row["table_name"])
             if table_name not in schema:
                 schema[table_name] = {"name": table_name, "columns": []}
-            schema[table_name]["columns"].append(row["column_name"])
+            schema[table_name]["columns"].append(row["field_path"])
 
         return list(schema.values())
 
@@ -346,9 +348,8 @@ class BigQuery(BaseQueryRunner):
             data = self._get_query_result(jobs, query)
             error = None
 
-            json_data = json_dumps(data, ignore_nan=True)
         except apiclient.errors.HttpError as e:
-            json_data = None
+            data = None
             if e.resp.status in [400, 404]:
                 error = json_loads(e.content)["error"]["message"]
             else:
@@ -363,7 +364,7 @@ class BigQuery(BaseQueryRunner):
 
             raise
 
-        return json_data, error
+        return data, error
 
 
 register(BigQuery)
