@@ -21,6 +21,7 @@ from redash.query_runner import (
     register,
 )
 from redash.settings import QUERY_RESULTS_MAX_ROWS, QUERY_RESULTS_MAX_ROWS_CONFLUENCE
+from redash.utils import json_loads
 
 logger = logging.getLogger(__name__)
 
