@@ -1,7 +1,7 @@
 import { isFunction } from "lodash";
 import React from "react";
 import PropTypes from "prop-types";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 
 /**
   Wrapper for dialogs based on Ant's <Modal> component.
@@ -111,6 +111,9 @@ function openDialog(DialogComponent, props) {
   const dialog = {
     props: {
       visible: true,
+      // Render the dialog right in its container (below), not in a portal: antd 4.24 mounts the portal's content
+      // before attaching it to the document, so inputs with `autoFocus` didn't get focused
+      getContainer: false,
       okButtonProps: {},
       cancelButtonProps: {},
       onOk: () => {},
@@ -130,15 +133,16 @@ function openDialog(DialogComponent, props) {
 
   const container = document.createElement("div");
   document.body.appendChild(container);
+  const root = createRoot(container);
 
   function render() {
-    ReactDOM.render(<DialogComponent {...props} dialog={dialog} />, container);
+    root.render(<DialogComponent {...props} dialog={dialog} />);
   }
 
   function destroyDialog() {
     // Allow calling chain to roll up, and then destroy component
     setTimeout(() => {
-      ReactDOM.unmountComponentAtNode(container);
+      root.unmount();
       document.body.removeChild(container);
     }, 10);
   }
@@ -191,17 +195,17 @@ function openDialog(DialogComponent, props) {
   const result = {
     close: closeDialog,
     dismiss: dismissDialog,
-    update: newProps => {
+    update: (newProps) => {
       props = { ...props, ...newProps };
       render();
     },
-    onClose: handler => {
+    onClose: (handler) => {
       if (isFunction(handler)) {
         handlers.onClose = handler;
       }
       return result;
     },
-    onDismiss: handler => {
+    onDismiss: (handler) => {
       if (isFunction(handler)) {
         handlers.onDismiss = handler;
       }
@@ -217,7 +221,7 @@ function openDialog(DialogComponent, props) {
 export function wrap(DialogComponent) {
   return {
     Component: DialogComponent,
-    showModal: props => openDialog(DialogComponent, props),
+    showModal: (props) => openDialog(DialogComponent, props),
   };
 }
 

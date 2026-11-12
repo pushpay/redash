@@ -7,18 +7,12 @@ const DYNAMIC_DATE_OPTIONS = [
   {
     name: "Today/Now",
     value: getDynamicDateFromString("d_now"),
-    label: () =>
-      getDynamicDateFromString("d_now")
-        .value()
-        .format("MMM D"),
+    label: () => getDynamicDateFromString("d_now").value().format("MMM D"),
   },
   {
     name: "Yesterday",
     value: getDynamicDateFromString("d_yesterday"),
-    label: () =>
-      getDynamicDateFromString("d_yesterday")
-        .value()
-        .format("MMM D"),
+    label: () => getDynamicDateFromString("d_yesterday").value().format("MMM D"),
   },
 ];
 
@@ -35,8 +29,8 @@ function DateParameter(props) {
 DateParameter.propTypes = {
   type: PropTypes.string,
   className: PropTypes.string,
-  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
-  parameter: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+  value: PropTypes.any,
+  parameter: PropTypes.any,
   onSelect: PropTypes.func,
 };
 

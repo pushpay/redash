@@ -48,7 +48,6 @@ class Parameter {
     return isNull(this.normalizeValue(value));
   }
 
-  // eslint-disable-next-line class-methods-use-this
   normalizeValue(value) {
     if (isUndefined(value)) {
       return null;
@@ -58,7 +57,7 @@ class Parameter {
 
   updateLocals() {
     if (isArray(this.locals)) {
-      each(this.locals, local => {
+      each(this.locals, (local) => {
         local.setValue(this.value);
       });
     }
@@ -117,7 +116,7 @@ class Parameter {
 
   /** Get a saveable version of the Parameter by omitting unnecessary props */
   toSaveableObject() {
-    return omit(this, ["$$value", "urlPrefix", "pendingValue", "parentQueryId"]);
+    return omit(this, ["$$value", "urlPrefix", "pendingValue", "parentQueryId", "locals"]);
   }
 }
 

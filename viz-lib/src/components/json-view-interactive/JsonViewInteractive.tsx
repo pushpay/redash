@@ -1,5 +1,3 @@
-/* eslint-disable react/prop-types */
-
 import { isFinite, isString, isArray, isObject, keys, map } from "lodash";
 import React, { useState } from "react";
 import cx from "classnames";
@@ -34,7 +32,8 @@ function JsonBlock({ value, children, openingBrace, closingBrace, withKeys }: an
             return (
               <span
                 key={"item-" + key}
-                className={cx("jvi-item", { "jvi-nested-first": isFirst, "jvi-nested-last": isLast })}>
+                className={cx("jvi-item", { "jvi-nested-first": isFirst, "jvi-nested-last": isLast })}
+              >
                 {withKeys && (
                   <span className="jvi-object-key">
                     <JsonValue value={key}>
@@ -95,7 +94,12 @@ type OwnJsonViewInteractiveProps = {
   value?: any;
 };
 
-type JsonViewInteractiveProps = OwnJsonViewInteractiveProps & typeof JsonViewInteractive.defaultProps;
+const jsonViewInteractiveDefaultProps = {
+  // `null` will be rendered as "null" because it is a valid JSON value, so use `undefined` for no value
+  value: undefined,
+};
+
+type JsonViewInteractiveProps = OwnJsonViewInteractiveProps & typeof jsonViewInteractiveDefaultProps;
 
 export default function JsonViewInteractive({ value }: JsonViewInteractiveProps) {
   return (
@@ -105,7 +109,4 @@ export default function JsonViewInteractive({ value }: JsonViewInteractiveProps)
   );
 }
 
-JsonViewInteractive.defaultProps = {
-  // `null` will be rendered as "null" because it is a valid JSON value, so use `undefined` for no value
-  value: undefined,
-};
+JsonViewInteractive.defaultProps = jsonViewInteractiveDefaultProps;

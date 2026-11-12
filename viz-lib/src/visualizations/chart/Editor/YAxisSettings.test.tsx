@@ -1,25 +1,18 @@
 import React from "react";
-import enzyme from "enzyme";
+import { render, fireEvent } from "@testing-library/react";
 
 import getOptions from "../getOptions";
 import YAxisSettings from "./YAxisSettings";
-
-function findByTestID(wrapper: any, testId: any) {
-  return wrapper.find(`[data-test="${testId}"]`);
-}
-
-function elementExists(wrapper: any, testId: any) {
-  return findByTestID(wrapper, testId).length > 0;
-}
+import { findByTestID, findInput, openSelect, elementExists } from "@/testUtils";
 
 function mount(options: any, done: any) {
   options = getOptions(options);
-  return enzyme.mount(
+  return render(
     <YAxisSettings
       visualizationName="Test"
       data={{ columns: [], rows: [] }}
       options={options}
-      onOptionsChange={changedOptions => {
+      onOptionsChange={(changedOptions: any) => {
         expect(changedOptions).toMatchSnapshot();
         done();
       }}
@@ -28,8 +21,8 @@ function mount(options: any, done: any) {
 }
 
 describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
-  test("Changes axis type", done => {
-    const el = mount(
+  test("Changes axis type", (done) => {
+    mount(
       {
         globalSeriesType: "column",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
@@ -37,16 +30,12 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
       done
     );
 
-    findByTestID(el, "Chart.LeftYAxis.Type")
-      .last()
-      .simulate("mouseDown");
-    findByTestID(el, "Chart.LeftYAxis.Type.Category")
-      .last()
-      .simulate("click");
+    openSelect("Chart.LeftYAxis.Type");
+    fireEvent.click(findByTestID("Chart.LeftYAxis.Type.Category"));
   });
 
-  test("Changes axis name", done => {
-    const el = mount(
+  test("Changes axis name", (done) => {
+    mount(
       {
         globalSeriesType: "column",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
@@ -54,13 +43,11 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
       done
     );
 
-    findByTestID(el, "Chart.LeftYAxis.Name")
-      .last()
-      .simulate("change", { target: { value: "test" } });
+    fireEvent.change(findByTestID("Chart.LeftYAxis.Name"), { target: { value: "test" } });
   });
 
-  test("Changes axis tick format", done => {
-    const el = mount(
+  test("Changes axis tick format", (done) => {
+    mount(
       {
         globalSeriesType: "column",
         yAxis: [],
@@ -68,13 +55,11 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
       done
     );
 
-    findByTestID(el, "Chart.LeftYAxis.TickFormat")
-      .last()
-      .simulate("change", { target: { value: "s" } });
+    fireEvent.change(findByTestID("Chart.LeftYAxis.TickFormat"), { target: { value: "s" } });
   });
 
-  test("Changes axis min value", done => {
-    const el = mount(
+  test("Changes axis min value", (done) => {
+    mount(
       {
         globalSeriesType: "column",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
@@ -82,14 +67,11 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
       done
     );
 
-    findByTestID(el, "Chart.LeftYAxis.RangeMin")
-      .find("input")
-      .last()
-      .simulate("change", { target: { value: "50" } });
+    fireEvent.change(findInput(findByTestID("Chart.LeftYAxis.RangeMin")), { target: { value: "50" } });
   });
 
-  test("Changes axis max value", done => {
-    const el = mount(
+  test("Changes axis max value", (done) => {
+    mount(
       {
         globalSeriesType: "column",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
@@ -97,37 +79,34 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
       done
     );
 
-    findByTestID(el, "Chart.LeftYAxis.RangeMax")
-      .find("input")
-      .last()
-      .simulate("change", { target: { value: "200" } });
+    fireEvent.change(findInput(findByTestID("Chart.LeftYAxis.RangeMax")), { target: { value: "200" } });
   });
 
   describe("for non-heatmap", () => {
     test("Right Y Axis should be available", () => {
       // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-      const el = mount({
+      mount({
         globalSeriesType: "column",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
       });
 
-      expect(elementExists(el, "Chart.RightYAxis.Type")).toBeTruthy();
+      expect(elementExists("Chart.RightYAxis.Type")).toBeTruthy();
     });
   });
 
   describe("for heatmap", () => {
     test("Right Y Axis should not be available", () => {
       // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-      const el = mount({
+      mount({
         globalSeriesType: "heatmap",
         yAxis: [{ type: "linear" }, { type: "linear", opposite: true }],
       });
 
-      expect(elementExists(el, "Chart.RightYAxis.Type")).toBeFalsy();
+      expect(elementExists("Chart.RightYAxis.Type")).toBeFalsy();
     });
 
-    test("Sets Sort X Values option", done => {
-      const el = mount(
+    test("Sets Sort X Values option", (done) => {
+      mount(
         {
           globalSeriesType: "heatmap",
           sortY: false,
@@ -135,13 +114,11 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
         done
       );
 
-      findByTestID(el, "Chart.LeftYAxis.Sort")
-        .last()
-        .simulate("click");
+      fireEvent.click(findByTestID("Chart.LeftYAxis.Sort"));
     });
 
-    test("Sets Reverse Y Values option", done => {
-      const el = mount(
+    test("Sets Reverse Y Values option", (done) => {
+      mount(
         {
           globalSeriesType: "heatmap",
           reverseY: false,
@@ -149,9 +126,7 @@ describe("Visualizations -> Chart -> Editor -> Y-Axis Settings", () => {
         done
       );
 
-      findByTestID(el, "Chart.LeftYAxis.Reverse")
-        .last()
-        .simulate("click");
+      fireEvent.click(findByTestID("Chart.LeftYAxis.Reverse"));
     });
   });
 });

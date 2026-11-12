@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useLayoutEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { chain, cloneDeep, find } from "lodash";
 import cx from "classnames";
-import { Responsive, WidthProvider } from "react-grid-layout";
+import { Responsive } from "react-grid-layout/legacy";
 import { VisualizationWidget, TextboxWidget, RestrictedWidget } from "@/components/dashboards/dashboard-widget";
 import { FiltersType } from "@/components/Filters";
 import cfg from "@/config/dashboard-grid-options";
@@ -12,7 +12,36 @@ import { WidgetTypeEnum } from "@/services/widget";
 import "react-grid-layout/css/styles.css";
 import "./dashboard-grid.less";
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+// Replaces react-grid-layout's WidthProvider, which renders the grid at a default width of 1280px and measures
+// the real width only after the first paint: widgets (and the visualizations in them) would first render at the
+// wrong size and then resize. This measures the grid before it's painted, and follows its size after that.
+function ResponsiveGridLayout({ className, ...props }) {
+  const [node, setNode] = useState(null);
+  const [width, setWidth] = useState(null);
+
+  useLayoutEffect(() => {
+    if (!node) {
+      return undefined;
+    }
+    const measure = () => {
+      const style = window.getComputedStyle(node);
+      setWidth(Math.round(node.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node]);
+
+  if (width === null) {
+    return <div ref={setNode} className={cx("react-grid-layout", className)} />;
+  }
+  return <Responsive innerRef={setNode} className={className} width={width} {...props} />;
+}
+
+ResponsiveGridLayout.propTypes = {
+  className: PropTypes.string,
+};
 
 const WidgetType = PropTypes.shape({
   id: PropTypes.number.isRequired,
@@ -87,7 +116,7 @@ class DashboardGrid extends React.Component {
   static propTypes = {
     isEditing: PropTypes.bool.isRequired,
     isPublic: PropTypes.bool,
-    dashboard: PropTypes.object.isRequired, // eslint-disable-line react/forbid-prop-types
+    dashboard: PropTypes.object.isRequired,
     widgets: PropTypes.arrayOf(WidgetType).isRequired,
     filters: FiltersType,
     onBreakpointChange: PropTypes.func,
@@ -181,23 +210,26 @@ class DashboardGrid extends React.Component {
       return;
     }
 
-    const normalized = chain(layouts[MULTI])
-      .keyBy("i")
-      .mapValues(this.normalizeTo)
-      .value();
+    const normalized = chain(layouts[MULTI]).keyBy("i").mapValues(this.normalizeTo).value();
 
     this.props.onLayoutChange(normalized);
   };
 
-  onBreakpointChange = mode => {
+  onBreakpointChange = (mode) => {
     this.mode = mode;
     this.props.onBreakpointChange(mode === SINGLE);
   };
 
+  // Until the grid reports its layouts, use the widgets' positions: a dashboard that is first shown in single column
+  // mode would otherwise build its multi column layout from the single column one
+  getMultiColumnLayout(layouts = this.state.layouts) {
+    return layouts[MULTI] || this.props.widgets.map((widget) => DashboardGrid.normalizeFrom(widget));
+  }
+
   // height updated by auto-height
   onWidgetHeightUpdated = (widgetId, newHeight) => {
     this.setState(({ layouts }) => {
-      const layout = cloneDeep(layouts[MULTI]); // must clone to allow react-grid-layout to compare prev/next state
+      const layout = cloneDeep(this.getMultiColumnLayout(layouts)); // must clone to allow react-grid-layout to compare prev/next state
       const item = find(layout, { i: widgetId.toString() });
       if (item) {
         // update widget height
@@ -217,7 +249,7 @@ class DashboardGrid extends React.Component {
     this.autoHeightCtrl.resume();
   };
 
-  normalizeTo = layout => ({
+  normalizeTo = (layout) => ({
     col: layout.x,
     row: layout.y,
     sizeX: layout.w,
@@ -238,6 +270,7 @@ class DashboardGrid extends React.Component {
       widgets,
     } = this.props;
     const className = cx("dashboard-wrapper", isEditing ? "editing-mode" : "preview-mode");
+    const layouts = this.state.layouts[MULTI] ? this.state.layouts : { [MULTI]: this.getMultiColumnLayout() };
 
     return (
       <div className={className}>
@@ -251,11 +284,12 @@ class DashboardGrid extends React.Component {
           isResizable={isEditing}
           onResizeStart={this.autoHeightCtrl.stop}
           onResizeStop={this.onWidgetResize}
-          layouts={this.state.layouts}
+          layouts={layouts}
           onLayoutChange={this.onLayoutChange}
           onBreakpointChange={this.onBreakpointChange}
-          breakpoints={{ [MULTI]: cfg.mobileBreakPoint, [SINGLE]: 0 }}>
-          {widgets.map(widget => (
+          breakpoints={{ [MULTI]: cfg.mobileBreakPoint, [SINGLE]: 0 }}
+        >
+          {widgets.map((widget) => (
             <div
               key={widget.id}
               data-grid={DashboardGrid.normalizeFrom(widget)}
@@ -263,7 +297,8 @@ class DashboardGrid extends React.Component {
               data-test={`WidgetId${widget.id}`}
               className={cx("dashboard-widget-wrapper", {
                 "widget-auto-height-enabled": this.autoHeightCtrl.exists(widget.id),
-              })}>
+              })}
+            >
               <DashboardWidget
                 dashboard={dashboard}
                 widget={widget}

@@ -2,7 +2,7 @@ import { map, max, uniq, sortBy, flatten, find, findIndex } from "lodash";
 import { createNumberFormatter } from "@/lib/value-format";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'plot... Remove this comment to see the full error message
 import Colorscale from "plotly.js/src/components/colorscale";
-import d3 from "d3";
+import * as d3 from "d3";
 import chooseTextColorForBackground from "@/lib/chooseTextColorForBackground";
 
 const defaultColorScheme = [
@@ -17,7 +17,9 @@ const defaultColorScheme = [
 ];
 
 function getColor(value: any, scheme: any) {
-  if (value == 1) { return scheme[scheme.length - 1][1]; }
+  if (value == 1) {
+    return scheme[scheme.length - 1][1];
+  }
   const upperboundIndex = findIndex(scheme, (range: any) => value < range[0]);
   const scale = d3.interpolate(scheme[upperboundIndex - 1][1], scheme[upperboundIndex][1]);
   return scale(value);
@@ -36,9 +38,9 @@ function prepareSeries(series: any, options: any, additionalOptions: any) {
   };
 
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'never[]'.
-  plotlySeries.x = uniq(map(series.data, v => v.x));
+  plotlySeries.x = uniq(map(series.data, (v) => v.x));
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'never[]'.
-  plotlySeries.y = uniq(map(series.data, v => v.y));
+  plotlySeries.y = uniq(map(series.data, (v) => v.y));
 
   if (options.sortX) {
     plotlySeries.x = sortBy(plotlySeries.x);
@@ -56,7 +58,7 @@ function prepareSeries(series: any, options: any, additionalOptions: any) {
     plotlySeries.y.reverse();
   }
 
-  const zMax = max(map(series.data, d => d.zVal));
+  const zMax = max(map(series.data, (d) => d.zVal));
 
   // Use text trace instead of default annotation for better performance
   const dataLabels = {
@@ -121,5 +123,5 @@ export default function prepareHeatmapData(seriesList: any, options: any) {
     formatNumber: createNumberFormatter(options.numberFormat),
   };
 
-  return flatten(map(seriesList, series => prepareSeries(series, options, additionalOptions)));
+  return flatten(map(seriesList, (series) => prepareSeries(series, options, additionalOptions)));
 }

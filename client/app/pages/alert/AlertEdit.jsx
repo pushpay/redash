@@ -100,9 +100,9 @@ export default class AlertEdit extends React.Component {
                       columnNames={queryResult.getColumnNames()}
                       resultValues={queryResult.getData()}
                       subject={options.custom_subject}
-                      setSubject={subject => onNotificationTemplateChange({ custom_subject: subject })}
+                      setSubject={(subject) => onNotificationTemplateChange({ custom_subject: subject })}
                       body={options.custom_body}
-                      setBody={body => onNotificationTemplateChange({ custom_body: body })}
+                      setBody={(body) => onNotificationTemplateChange({ custom_body: body })}
                     />
                   </HorizontalFormItem>
                 </>
@@ -123,7 +123,7 @@ export default class AlertEdit extends React.Component {
 
 AlertEdit.propTypes = {
   alert: AlertType.isRequired,
-  queryResult: PropTypes.object, // eslint-disable-line react/forbid-prop-types,
+  queryResult: PropTypes.object,
   pendingRearm: PropTypes.number,
   menuButton: PropTypes.node.isRequired,
   save: PropTypes.func.isRequired,

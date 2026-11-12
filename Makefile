@@ -1,4 +1,4 @@
-.PHONY: compose_build up test_db create_database clean clean-all down tests lint backend-unit-tests frontend-unit-tests test build watch start redis-cli bash
+.PHONY: compose_build up test_db create_database clean down tests lint backend-unit-tests frontend-unit-tests test build watch start redis-cli bash
 
 compose_build: .env
 	COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose build
@@ -22,20 +22,12 @@ create_database: .env
 
 clean:
 	docker compose down
-	docker compose --project-name cypress down
 	docker compose rm --stop --force
-	docker compose --project-name cypress rm --stop --force
 	docker image rm --force \
-		cypress-server:latest cypress-worker:latest cypress-scheduler:latest \
 		redash-server:latest redash-worker:latest redash-scheduler:latest
 	docker container prune --force
 	docker image prune --force
 	docker volume prune --force
-
-clean-all: clean
-	docker image rm --force \
-		redash/redash:10.1.0.b50633 redis:7-alpine maildev/maildev:latest \
-		pgautoupgrade/pgautoupgrade:15-alpine3.8 pgautoupgrade/pgautoupgrade:latest
 
 down:
 	docker compose down
@@ -59,19 +51,19 @@ backend-unit-tests: up test_db
 	docker compose run --rm --name tests server tests
 
 frontend-unit-tests:
-	CYPRESS_INSTALL_BINARY=0 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 yarn --frozen-lockfile
-	yarn test
+	PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 pnpm install --frozen-lockfile
+	pnpm test
 
 test: backend-unit-tests frontend-unit-tests lint
 
 build:
-	yarn build
+	pnpm run build
 
 watch:
-	yarn watch
+	pnpm run watch
 
 start:
-	yarn start
+	pnpm start
 
 redis-cli:
 	docker compose run --rm redis redis-cli -h redis

@@ -6,12 +6,11 @@ import * as d3 from "d3";
 import { has, map, keys, groupBy, sortBy, filter, find, compact, first, every, identity } from "lodash";
 
 const exitNode = "<<<Exit>>>";
-// @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof im... Remove this comment to see the full error message
-const colors = d3.scale.category10();
+const colors = d3.scaleOrdinal(d3.schemeCategory10);
 
 // helper function colorMap - color gray if "end" is detected
 function colorMap(d: any) {
-  return colors(d.name);
+  return colors(d.data.name);
 }
 
 // Return array of ancestors of nodes, highest first, but excluding the root.
@@ -29,12 +28,12 @@ function getAncestors(node: any) {
 function buildNodesFromHierarchyData(data: any) {
   const grouped = groupBy(data, "sequence");
 
-  return map(grouped, value => {
+  return map(grouped, (value) => {
     const sorted = sortBy(value, "stage");
     return {
       size: value[0].value || 0,
       sequence: value[0].sequence,
-      nodes: map(sorted, i => i.node),
+      nodes: map(sorted, (i) => i.node),
     };
   });
 }
@@ -46,22 +45,22 @@ function buildNodesFromTableData(data: any) {
   return map(data, (row, sequence) => ({
     size: row.value || 0,
     sequence,
-    nodes: compact(map(dataKeys, key => row[key])),
+    nodes: compact(map(dataKeys, (key) => row[key])),
   }));
 }
 
 function isDataInHierarchyFormat(data: any) {
   const firstRow = first(data);
-  return every(["sequence", "stage", "node", "value"], field => has(firstRow, field));
+  return every(["sequence", "stage", "node", "value"], (field) => has(firstRow, field));
 }
 
 function buildHierarchy(data: any) {
   data = isDataInHierarchyFormat(data) ? buildNodesFromHierarchyData(data) : buildNodesFromTableData(data);
 
   // build tree
-  const root = {
+  const root: any = {
     name: "root",
-    children: [],
+    children: [] as any[],
   };
 
   data.forEach((d: any) => {
@@ -78,43 +77,33 @@ function buildHierarchy(data: any) {
       if (!children) {
         currentNode.children = children = [];
         children.push({
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'never'.
           name: exitNode,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'any' is not assignable to type 'never'.
           size: currentNode.size,
         });
       }
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type 'never'.
-      let childNode = find(children, child => child.name === nodeName);
+      let childNode = find(children, (child) => child.name === nodeName);
 
       if (isLeaf && childNode) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'children' does not exist on type 'never'... Remove this comment to see the full error message
         childNode.children = childNode.children || [];
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'children' does not exist on type 'never'... Remove this comment to see the full error message
         childNode.children.push({
           name: exitNode,
           size,
         });
       } else if (isLeaf) {
         children.push({
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'any' is not assignable to type 'never'.
           name: nodeName,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'never'.
           size,
         });
       } else {
         if (!childNode) {
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: any; children: never[]; }' is not as... Remove this comment to see the full error message
           childNode = {
             name: nodeName,
             children: [],
           };
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'undefined' is not assignable to ... Remove this comment to see the full error message
           children.push(childNode);
         }
 
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'undefined' is not assignable to type '{ name... Remove this comment to see the full error message
         currentNode = childNode;
       }
     }
@@ -130,18 +119,14 @@ function isDataValid(data: any) {
 export default function initSunburst(data: any) {
   if (!isDataValid(data)) {
     return (element: any) => {
-      d3.select(element)
-        .selectAll("*")
-        .remove();
+      d3.select(element).selectAll("*").remove();
     };
   }
 
   data = buildHierarchy(data.rows);
 
   return (element: any) => {
-    d3.select(element)
-      .selectAll("*")
-      .remove();
+    d3.select(element).selectAll("*").remove();
 
     // svg dimensions
     const width = element.clientWidth;
@@ -173,21 +158,13 @@ export default function initSunburst(data: any) {
     // Total size of all nodes, to be used later when data is loaded
     let totalSize = 0;
 
-    // create d3.layout.partition
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'layout' does not exist on type 'typeof i... Remove this comment to see the full error message
-    const partition = d3.layout
-      .partition()
-      .size([2 * Math.PI, radius * radius])
-      .value((d: any) => d.size);
-
     // create arcs for drawing D3 paths
-    const arc = d3.svg
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'arc' does not exist on type '(url: strin... Remove this comment to see the full error message
-      .arc()
-      .startAngle((d: any) => d.x)
-      .endAngle((d: any) => d.x + d.dx)
-      .innerRadius((d: any) => Math.sqrt(d.y))
-      .outerRadius((d: any) => Math.sqrt(d.y + d.dy));
+    const arc = d3
+      .arc<any>()
+      .startAngle((d: any) => d.x0)
+      .endAngle((d: any) => d.x1)
+      .innerRadius((d: any) => Math.sqrt(d.y0))
+      .outerRadius((d: any) => Math.sqrt(d.y1));
 
     /**
      * Define and initialize D3 select references and div-containers
@@ -243,8 +220,7 @@ export default function initSunburst(data: any) {
     // Update the breadcrumb breadcrumbs to show the current sequence and percentage.
     function updateBreadcrumbs(ancestors: any, percentageString: any) {
       // Data join, where primary key = name + depth.
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-      const g = breadcrumbs.selectAll("g").data(ancestors, d => d.name + d.depth);
+      const g = breadcrumbs.selectAll("g").data(ancestors, (d: any) => d.data.name + d.depth);
 
       // Add breadcrumb and label for entering nodes.
       const breadcrumb = g.enter().append("g");
@@ -263,11 +239,10 @@ export default function initSunburst(data: any) {
         .attr("dy", "0.35em")
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-        .text(d => d.name);
+        .text((d: any) => d.data.name);
 
       // Set position for entering and updating nodes.
-      g.attr("transform", (d, i) => `translate(${i * (b.w + b.s)}, 0)`);
+      breadcrumb.merge(g as any).attr("transform", (d, i) => `translate(${i * (b.w + b.s)}, 0)`);
 
       // Remove exiting nodes.
       g.exit().remove();
@@ -285,7 +260,7 @@ export default function initSunburst(data: any) {
 
     // helper function mouseover to handle mouseover events/animations and calculation
     // of ancestor nodes etc
-    function mouseover(d: any) {
+    function mouseover(event: MouseEvent, d: any) {
       // build percentage string
       const percentage = ((100 * d.value) / totalSize).toPrecision(3);
       let percentageString = `${percentage}%`;
@@ -302,7 +277,7 @@ export default function initSunburst(data: any) {
       sunburst.selectAll("path").attr("opacity", 0.3);
       sunburst
         .selectAll("path")
-        .filter(node => ancestors.indexOf(node) >= 0)
+        .filter((node) => ancestors.indexOf(node) >= 0)
         .attr("opacity", 1);
 
       // update summary
@@ -326,9 +301,7 @@ export default function initSunburst(data: any) {
         .transition()
         .duration(1000)
         .attr("opacity", 1)
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 2.
-        .each("end", function endClick() {
-          // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
+        .on("end", function endClick() {
           d3.select(this).on("mouseover", mouseover);
         });
 
@@ -337,15 +310,28 @@ export default function initSunburst(data: any) {
       summary.style("visibility", "hidden");
     }
 
+    // Leaf values are summed up the tree; a node's own `size` only counts if it has no children.
+    const root = d3.hierarchy<any>(data).sum((d: any) => (d.children && d.children.length ? 0 : d.size));
+
+    root.sort((a, b) => (b.value as number) - (a.value as number));
+    d3.partition<any>().size([2 * Math.PI, radius * radius])(root);
+
+    // Nodes in pre-order, largest children first (as d3 3's partition returned them): the order
+    // determines which color each name gets.
+    const allNodes: any[] = [];
+    root.eachBefore((node) => {
+      allNodes.push(node);
+    });
+
     // Build only nodes of a threshold "visible" sizes to improve efficiency
     // 0.005 radians = 0.29 degrees
-    const nodes = partition.nodes(data).filter((d: any) => d.dx > 0.005 && d.name !== exitNode);
+    const nodes = allNodes.filter((d: any) => d.x1 - d.x0 > 0.005 && d.data.name !== exitNode);
 
     // this section is required to update the colors.domain() every time the data updates
     const uniqueNames = (function uniqueNames(a) {
       const output: any = [];
       a.forEach((d: any) => {
-        if (output.indexOf(d.name) === -1) output.push(d.name);
+        if (output.indexOf(d.data.name) === -1) output.push(d.data.name);
       });
       return output;
     })(nodes);
@@ -359,8 +345,7 @@ export default function initSunburst(data: any) {
       .enter()
       .append("path")
       .classed("nodePath", true)
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-      .attr("display", d => (d.depth ? null : "none"))
+      .attr("display", (d: any) => (d.depth ? null : "none"))
       .attr("d", arc)
       .attr("fill", colorMap)
       .attr("opacity", 1)

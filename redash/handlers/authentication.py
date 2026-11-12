@@ -28,6 +28,16 @@ def get_google_auth_url(next_path):
     return google_auth_url
 
 
+def get_oidc_auth_url(next_path):
+    if not settings.OIDC_ENABLED:
+        return None
+    if settings.MULTI_ORG:
+        oidc_auth_url = url_for("oidc.authorize_org", next=next_path, org_slug=current_org.slug)
+    else:
+        oidc_auth_url = url_for("oidc.authorize", next=next_path)
+    return oidc_auth_url
+
+
 def render_token_login_page(template, org_slug, token, invite):
     error_message = None
     try:
@@ -90,12 +100,15 @@ def render_token_login_page(template, org_slug, token, invite):
             return redirect(url_for("redash.index", org_slug=org_slug))
 
     google_auth_url = get_google_auth_url(url_for("redash.index", org_slug=org_slug))
+    oidc_auth_url = get_oidc_auth_url(url_for("redash.index", org_slug=org_slug))
 
     return (
         render_template(
             template,
             show_google_openid=settings.GOOGLE_OAUTH_ENABLED,
+            show_oidc_login=settings.OIDC_ENABLED,
             google_auth_url=google_auth_url,
+            oidc_auth_url=oidc_auth_url,
             show_saml_login=current_org.get_setting("auth_saml_enabled"),
             show_remote_user_login=settings.REMOTE_USER_LOGIN_ENABLED,
             show_ldap_login=settings.LDAP_LOGIN_ENABLED,
@@ -205,6 +218,7 @@ def login(org_slug=None):
         flash("Password login is not enabled for your organization.")
 
     google_auth_url = get_google_auth_url(next_path)
+    oidc_auth_url = get_oidc_auth_url(next_path)
 
     return render_template(
         "login.html",
@@ -212,7 +226,9 @@ def login(org_slug=None):
         next=next_path,
         email=request.form.get("email", ""),
         show_google_openid=settings.GOOGLE_OAUTH_ENABLED,
+        show_oidc_login=settings.OIDC_ENABLED,
         google_auth_url=google_auth_url,
+        oidc_auth_url=oidc_auth_url,
         show_password_login=current_org.get_setting("auth_password_login_enabled"),
         show_saml_login=current_org.get_setting("auth_saml_enabled"),
         show_remote_user_login=settings.REMOTE_USER_LOGIN_ENABLED,
@@ -252,6 +268,14 @@ def number_format_config():
     return {
         "integerFormat": current_org.get_setting("integer_format"),
         "floatFormat": current_org.get_setting("float_format"),
+        "thousandsSeparator": current_org.get_setting("thousands_separator"),
+        "decimalSeparator": current_org.get_setting("decimal_separator"),
+    }
+
+
+def null_value_config():
+    return {
+        "nullValue": current_org.get_setting("null_value"),
     }
 
 
@@ -272,6 +296,7 @@ def client_config():
         "showPermissionsControl": current_org.get_setting("feature_show_permissions_control"),
         "hidePlotlyModeBar": current_org.get_setting("hide_plotly_mode_bar"),
         "disablePublicUrls": current_org.get_setting("disable_public_urls"),
+        "multiByteSearchEnabled": current_org.get_setting("multi_byte_search_enabled"),
         "allowCustomJSVisualizations": settings.FEATURE_ALLOW_CUSTOM_JS_VISUALIZATIONS,
         "autoPublishNamedQueries": settings.FEATURE_AUTO_PUBLISH_NAMED_QUERIES,
         "extendedAlertOptions": settings.FEATURE_EXTENDED_ALERT_OPTIONS,
@@ -279,6 +304,7 @@ def client_config():
         "dashboardRefreshIntervals": settings.DASHBOARD_REFRESH_INTERVALS,
         "queryRefreshIntervals": settings.QUERY_REFRESH_INTERVALS,
         "googleLoginEnabled": settings.GOOGLE_OAUTH_ENABLED,
+        "oidcLoginEnabled": settings.OIDC_ENABLED,
         "ldapLoginEnabled": settings.LDAP_LOGIN_ENABLED,
         "pageSize": settings.PAGE_SIZE,
         "pageSizeOptions": settings.PAGE_SIZE_OPTIONS,
@@ -289,6 +315,7 @@ def client_config():
     client_config.update({"basePath": base_href()})
     client_config.update(date_time_format_config())
     client_config.update(number_format_config())
+    client_config.update(null_value_config())
 
     return client_config
 

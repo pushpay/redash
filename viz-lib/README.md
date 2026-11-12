@@ -8,8 +8,8 @@
 
 Required libraries:
 
-- react (`>=16.8.0`)
-- react-dom (`>=16.8.0`)
+- react (`>=18.0.0 <19.0.0`)
+- react-dom (`>=18.0.0 <19.0.0`)
 - antd (`>=4.0.0`)
 
 Using npm:
@@ -18,10 +18,10 @@ Using npm:
 npm install @redash/viz
 ```
 
-Using yarn:
+Using pnpm:
 
 ```bash
-yarn add @redash/viz
+pnpm add @redash/viz
 ```
 
 ## Usage

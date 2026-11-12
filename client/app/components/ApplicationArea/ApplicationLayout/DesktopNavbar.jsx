@@ -73,13 +73,11 @@ export default function DesktopNavbar() {
 
   return (
     <nav className="desktop-navbar">
-      <NavbarSection className="desktop-navbar-logo">
-        <div role="menuitem">
-          <Link href="./">
-            <img src={logoUrl} alt="Redash" />
-          </Link>
-        </div>
-      </NavbarSection>
+      <div className="desktop-navbar-logo">
+        <Link href="./">
+          <img src={logoUrl} alt="Redash" />
+        </Link>
+      </div>
 
       <NavbarSection>
         {currentUser.hasPermission("list_dashboards") && (
@@ -120,7 +118,8 @@ export default function DesktopNavbar() {
                 <PlusOutlinedIcon />
                 <span className="desktop-navbar-label">Create</span>
               </React.Fragment>
-            }>
+            }
+          >
             {canCreateQuery && (
               <Menu.Item key="new-query">
                 <Link href="queries/new" data-test="CreateQueryMenuItem">
@@ -165,14 +164,15 @@ export default function DesktopNavbar() {
 
       <NavbarSection className="desktop-navbar-profile-menu">
         <Menu.SubMenu
-          key="profile"
+          key="profile-menu"
           popupClassName="desktop-navbar-submenu"
           tabIndex={0}
           title={
             <span data-test="ProfileDropdown" className="desktop-navbar-profile-menu-title">
               <img className="profile__image_thumb" src={currentUser.profile_image_url} alt={currentUser.name} />
             </span>
-          }>
+          }
+        >
           <Menu.Item key="profile">
             <Link href="users/me">Profile</Link>
           </Menu.Item>

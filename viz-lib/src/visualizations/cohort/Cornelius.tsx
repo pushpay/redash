@@ -84,14 +84,10 @@ function formatStageTitle(options: any, index: any) {
 function formatTimeLabel(options: any, offset: any) {
   // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const interval = momentInterval[options.timeInterval];
-  return options.initialDate
-    .clone()
-    .add(offset, interval)
-    .format(options.timeLabelFormat);
+  return options.initialDate.clone().add(offset, interval).format(options.timeLabelFormat);
 }
 
 function CorneliusHeader({ options, maxRowLength }: any) {
-  // eslint-disable-line react/prop-types
   const cells = [];
   for (let i = 1; i < maxRowLength; i += 1) {
     cells.push(
@@ -111,7 +107,6 @@ function CorneliusHeader({ options, maxRowLength }: any) {
 }
 
 function CorneliusRow({ options, data, index, maxRowLength }: any) {
-  // eslint-disable-line react/prop-types
   const baseValue = data[0] || 0;
 
   const cells = [];
@@ -193,7 +188,12 @@ type OwnCorneliusProps = {
   };
 };
 
-type CorneliusProps = OwnCorneliusProps & typeof Cornelius.defaultProps;
+const corneliusDefaultProps = {
+  data: [],
+  options: {},
+};
+
+type CorneliusProps = OwnCorneliusProps & typeof corneliusDefaultProps;
 
 export default function Cornelius({ data, options }: CorneliusProps) {
   options = useMemo(() => prepareOptions(options), [options]);
@@ -202,7 +202,7 @@ export default function Cornelius({ data, options }: CorneliusProps) {
     () =>
       min([
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'number'.
-        max(map(data, d => d.length)) || 0,
+        max(map(data, (d) => d.length)) || 0,
         // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         options.maxColumns + 1, // each row includes totals, but `maxColumns` is only for stage columns
       ]),
@@ -231,7 +231,4 @@ export default function Cornelius({ data, options }: CorneliusProps) {
   );
 }
 
-Cornelius.defaultProps = {
-  data: [],
-  options: {},
-};
+Cornelius.defaultProps = corneliusDefaultProps;

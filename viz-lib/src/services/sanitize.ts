@@ -5,7 +5,7 @@ DOMPurify.setConfig({
   ADD_ATTR: ["target"],
 });
 
-DOMPurify.addHook("afterSanitizeAttributes", function(node) {
+DOMPurify.addHook("afterSanitizeAttributes", function (node) {
   // Fix elements with `target` attribute:
   // - allow only `target="_blank"
   // - add `rel="noopener noreferrer"` to prevent https://www.owasp.org/index.php/Reverse_Tabnabbing
@@ -20,4 +20,6 @@ DOMPurify.addHook("afterSanitizeAttributes", function(node) {
 
 export { DOMPurify };
 
-export default DOMPurify.sanitize;
+export default function sanitize(dirty: string | Node): string {
+  return DOMPurify.sanitize(dirty);
+}

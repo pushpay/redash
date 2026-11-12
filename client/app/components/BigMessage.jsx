@@ -10,7 +10,9 @@ function BigMessage({ message, icon, children, className }) {
       className={"big-message p-15 text-center " + className}
       role="status"
       aria-live="assertive"
-      aria-relevant="additions removals">
+      aria-relevant="additions removals"
+    >
+      {/* biome-ignore lint/a11y/useHeadingContent: the heading text follows the icon */}
       <h3 className="m-t-0 m-b-0" aria-labelledby={messageId}>
         <i className={cx("fa", icon)} aria-hidden="true" />
       </h3>

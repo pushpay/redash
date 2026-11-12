@@ -2,10 +2,11 @@ import calendar
 import datetime
 import logging
 import numbers
+import re
 import time
 
 import pytz
-from sqlalchemy import UniqueConstraint, and_, cast, distinct, func, or_
+from sqlalchemy import UniqueConstraint, and_, cast, distinct, func, or_, text
 from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, JSONB
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -228,7 +229,7 @@ class DataSource(BelongsToOrgMixin, db.Model):
 
     def _sort_schema(self, schema):
         return [
-            {"name": i["name"], "columns": sorted(i["columns"], key=lambda x: x["name"] if isinstance(x, dict) else x)}
+            {**i, "columns": sorted(i["columns"], key=lambda x: x["name"] if isinstance(x, dict) else x)}
             for i in sorted(schema, key=lambda x: x["name"])
         ]
 
@@ -340,7 +341,7 @@ class QueryResult(db.Model, BelongsToOrgMixin):
     def unused(cls, days=7):
         age_threshold = datetime.datetime.now() - datetime.timedelta(days=days)
         return (cls.query.filter(Query.id.is_(None), cls.retrieved_at < age_threshold).outerjoin(Query)).options(
-            load_only("id")
+            load_only(cls.id)
         )
 
     @classmethod
@@ -371,12 +372,15 @@ class QueryResult(db.Model, BelongsToOrgMixin):
             query_hash=query_hash,
             query_text=query,
             runtime=run_time,
-            data_source=data_source,
+            # Set the id rather than the relationship: the caller's data source may be
+            # detached, and cascading it into the session can clash with another copy.
+            data_source_id=data_source.id,
             retrieved_at=retrieved_at,
             data=data,
         )
 
         db.session.add(query_result)
+        db.session.flush()
         logging.info("Inserted query (%s) data; id=%s", query_hash, query_result.id)
 
         return query_result
@@ -527,15 +531,14 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
             .filter(DataSourceGroup.group_id.in_(group_ids))
         )
         queries = (
-            cls.query.options(
-                joinedload(Query.user),
-                joinedload(Query.latest_query_data).load_only("runtime", "retrieved_at"),
-            )
-            .filter(cls.id.in_(query_ids))
+            cls.query.filter(cls.id.in_(query_ids))
             # Adding outer joins to be able to order by relationship
             .outerjoin(User, User.id == Query.user_id)
             .outerjoin(QueryResult, QueryResult.id == Query.latest_query_data_id)
-            .options(contains_eager(Query.user), contains_eager(Query.latest_query_data))
+            .options(
+                contains_eager(Query.user),
+                contains_eager(Query.latest_query_data).load_only(QueryResult.runtime, QueryResult.retrieved_at),
+            )
         )
 
         if not include_drafts:
@@ -547,10 +550,8 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
         if base_query is None:
             base_query = cls.all_queries(user.group_ids, user.id, include_drafts=True)
         return base_query.join(
-            (
-                Favorite,
-                and_(Favorite.object_type == "Query", Favorite.object_id == Query.id),
-            )
+            Favorite,
+            and_(Favorite.object_type == "Query", Favorite.object_id == Query.id),
         ).filter(Favorite.user_id == user.id)
 
     @classmethod
@@ -563,8 +564,8 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
         query = (
             db.session.query(tag_column, usage_count)
             .group_by(tag_column)
-            .filter(Query.id.in_(queries.options(load_only("id"))))
-            .order_by(usage_count.desc())
+            .filter(Query.id.in_(queries.with_entities(Query.id)))
+            .order_by(tag_column)
         )
         return query
 
@@ -591,7 +592,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     @classmethod
     def outdated_queries(cls):
         queries = (
-            Query.query.options(joinedload(Query.latest_query_data).load_only("retrieved_at"))
+            Query.query.options(joinedload(Query.latest_query_data).load_only(QueryResult.retrieved_at))
             .filter(func.jsonb_typeof(Query.schedule) != "null")
             .order_by(Query.id)
             .all()
@@ -645,6 +646,43 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
         return list(outdated_queries.values())
 
     @classmethod
+    def _do_multi_byte_search(cls, all_queries, term, limit=None):
+        # term examples:
+        #    - word
+        #    - name:word
+        #    - query:word
+        #    - "multiple words"
+        #    - name:"multiple words"
+        #    - word1 word2 word3
+        #    - word1 "multiple word" query:"select foo"
+        tokens = re.findall(r'(?:([^:\s]+):)?(?:"([^"]+)"|(\S+))', term)
+        conditions = []
+        for token in tokens:
+            key = None
+            if token[0]:
+                key = token[0]
+
+            if token[1]:
+                value = token[1]
+            else:
+                value = token[2]
+
+            pattern = f"%{value}%"
+
+            if key == "id" and value.isdigit():
+                conditions.append(cls.id.equal(int(value)))
+            elif key == "name":
+                conditions.append(cls.name.ilike(pattern))
+            elif key == "query":
+                conditions.append(cls.query_text.ilike(pattern))
+            elif key == "description":
+                conditions.append(cls.description.ilike(pattern))
+            else:
+                conditions.append(or_(cls.name.ilike(pattern), cls.description.ilike(pattern)))
+
+        return all_queries.filter(and_(*conditions)).order_by(Query.id).limit(limit)
+
+    @classmethod
     def search(
         cls,
         term,
@@ -664,12 +702,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
 
         if multi_byte_search:
             # Since tsvector doesn't work well with CJK languages, use `ilike` too
-            pattern = "%{}%".format(term)
-            return (
-                all_queries.filter(or_(cls.name.ilike(pattern), cls.description.ilike(pattern)))
-                .order_by(Query.id)
-                .limit(limit)
-            )
+            return cls._do_multi_byte_search(all_queries, term, limit)
 
         # sort the result using the weight as defined in the search vector column
         return all_queries.search(term, sort=True).limit(limit)
@@ -678,13 +711,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     def search_by_user(cls, term, user, limit=None, multi_byte_search=False):
         if multi_byte_search:
             # Since tsvector doesn't work well with CJK languages, use `ilike` too
-            pattern = "%{}%".format(term)
-            return (
-                cls.by_user(user)
-                .filter(or_(cls.name.ilike(pattern), cls.description.ilike(pattern)))
-                .order_by(Query.id)
-                .limit(limit)
-            )
+            return cls._do_multi_byte_search(cls.by_user(user), term, limit)
 
         return cls.by_user(user).search(term, sort=True).limit(limit)
 
@@ -724,14 +751,31 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
                    JOIN data_source_groups ON queries.data_source_id = data_source_groups.data_source_id
                    WHERE queries.id in :ids"""
 
-        return db.session.execute(query, {"ids": tuple(query_ids)}).fetchall()
+        return db.session.execute(text(query), {"ids": tuple(query_ids)}).fetchall()
+
+    def update_latest_result_by_query_hash(self):
+        query_hash = self.query_hash
+        data_source_id = self.data_source_id
+        query_result = (
+            QueryResult.query.options(load_only(QueryResult.id))
+            .filter(
+                QueryResult.query_hash == query_hash,
+                QueryResult.data_source_id == data_source_id,
+            )
+            .order_by(QueryResult.retrieved_at.desc())
+            .first()
+        )
+        if query_result:
+            latest_query_data_id = query_result.id
+            self.latest_query_data_id = latest_query_data_id
+            db.session.add(self)
 
     @classmethod
     def update_latest_result(cls, query_result):
         # TODO: Investigate how big an impact this select-before-update makes.
         queries = Query.query.filter(
             Query.query_hash == query_result.query_hash,
-            Query.data_source == query_result.data_source,
+            Query.data_source_id == query_result.data_source_id,
             Query.is_archived.is_(False),
         )
 
@@ -819,7 +863,7 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
                      AND active=true
                      AND visualizations.query_id = :id"""
 
-        api_keys = db.session.execute(query, {"id": self.id}).fetchall()
+        api_keys = db.session.execute(text(query), {"id": self.id}).fetchall()
         return [api_key[0] for api_key in api_keys]
 
     def update_query_hash(self):
@@ -908,6 +952,7 @@ def next_state(op, value, threshold):
         # boolean value is Python specific and most likely will be confusing to
         # users.
         value = str(value).lower()
+        value_is_number = False
     else:
         try:
             value = float(value)
@@ -1099,7 +1144,7 @@ class Dashboard(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model
     @classmethod
     def all(cls, org, group_ids, user_id):
         query = (
-            Dashboard.query.options(joinedload(Dashboard.user).load_only("id", "name", "details", "email"))
+            Dashboard.query.options(joinedload(Dashboard.user).load_only(User.id, User.name, User.details, User.email))
             .distinct(cls.lowercase_name, Dashboard.created_at, Dashboard.slug)
             .outerjoin(Widget)
             .outerjoin(Visualization)
@@ -1135,8 +1180,8 @@ class Dashboard(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model
         query = (
             db.session.query(tag_column, usage_count)
             .group_by(tag_column)
-            .filter(Dashboard.id.in_(dashboards.options(load_only("id"))))
-            .order_by(usage_count.desc())
+            .filter(Dashboard.id.in_(dashboards.with_entities(Dashboard.id)))
+            .order_by(tag_column)
         )
         return query
 
@@ -1144,15 +1189,17 @@ class Dashboard(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model
     def favorites(cls, user, base_query=None):
         if base_query is None:
             base_query = cls.all(user.org, user.group_ids, user.id)
-        return base_query.join(
-            (
+        return (
+            base_query.distinct(cls.lowercase_name, Dashboard.created_at, Dashboard.slug, Favorite.created_at)
+            .join(
                 Favorite,
                 and_(
                     Favorite.object_type == "Dashboard",
                     Favorite.object_id == Dashboard.id,
                 ),
             )
-        ).filter(Favorite.user_id == user.id)
+            .filter(Favorite.user_id == user.id)
+        )
 
     @classmethod
     def by_user(cls, user):

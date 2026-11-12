@@ -31,7 +31,8 @@ function DashboardSettings({ dashboardConfiguration }) {
       <Checkbox
         checked={!!dashboard.dashboard_filters_enabled}
         onChange={({ target }) => updateDashboard({ dashboard_filters_enabled: target.checked })}
-        data-test="DashboardFiltersCheckbox">
+        data-test="DashboardFiltersCheckbox"
+      >
         Use Dashboard Level Filters
       </Checkbox>
     </div>
@@ -39,7 +40,7 @@ function DashboardSettings({ dashboardConfiguration }) {
 }
 
 DashboardSettings.propTypes = {
-  dashboardConfiguration: PropTypes.object.isRequired, // eslint-disable-line react/forbid-prop-types
+  dashboardConfiguration: PropTypes.object.isRequired,
 };
 
 function AddWidgetContainer({ dashboardConfiguration, className, ...props }) {
@@ -66,7 +67,7 @@ function AddWidgetContainer({ dashboardConfiguration, className, ...props }) {
 }
 
 AddWidgetContainer.propTypes = {
-  dashboardConfiguration: PropTypes.object.isRequired, // eslint-disable-line react/forbid-prop-types
+  dashboardConfiguration: PropTypes.object.isRequired,
   className: PropTypes.string,
 };
 
@@ -90,9 +91,9 @@ function DashboardComponent(props) {
 
   const [pageContainer, setPageContainer] = useState(null);
   const [bottomPanelStyles, setBottomPanelStyles] = useState({});
-  const onParametersEdit = parameters => {
+  const onParametersEdit = (parameters) => {
     const paramOrder = map(parameters, "name");
-    updateDashboard({ options: { globalParamOrder: paramOrder } });
+    updateDashboard({ options: { ...dashboard.options, globalParamOrder: paramOrder } });
   };
 
   useEffect(() => {
@@ -166,7 +167,7 @@ function DashboardComponent(props) {
 }
 
 DashboardComponent.propTypes = {
-  dashboard: PropTypes.object.isRequired, // eslint-disable-line react/forbid-prop-types
+  dashboard: PropTypes.object.isRequired,
 };
 
 function DashboardPage({ dashboardSlug, dashboardId, onError }) {
@@ -175,7 +176,7 @@ function DashboardPage({ dashboardSlug, dashboardId, onError }) {
 
   useEffect(() => {
     Dashboard.get({ id: dashboardId, slug: dashboardSlug })
-      .then(dashboardData => {
+      .then((dashboardData) => {
         recordEvent("view", "dashboard", dashboardData.id);
         setDashboard(dashboardData);
 
@@ -207,14 +208,15 @@ routes.register(
   "Dashboards.LegacyViewOrEdit",
   routeWithUserSession({
     path: "/dashboard/:dashboardSlug",
-    render: pageProps => <DashboardPage {...pageProps} />,
+    render: (pageProps) => <DashboardPage {...pageProps} />,
   })
 );
 
 routes.register(
   "Dashboards.ViewOrEdit",
   routeWithUserSession({
-    path: "/dashboards/:dashboardId([^-]+)(-.*)?",
-    render: pageProps => <DashboardPage {...pageProps} />,
+    // Dashboard URLs are `/dashboards/<id>-<slug>`; only the id identifies the dashboard
+    path: "/dashboards/:dashboardId",
+    render: ({ dashboardId, ...pageProps }) => <DashboardPage {...pageProps} dashboardId={dashboardId.split("-")[0]} />,
   })
 );

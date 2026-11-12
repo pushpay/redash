@@ -7,7 +7,6 @@ import Modal from "antd/lib/modal";
 import Input from "antd/lib/input";
 import Steps from "antd/lib/steps";
 import { wrap as wrapDialog, DialogPropType } from "@/components/DialogWrapper";
-import Link from "@/components/Link";
 import { PreviewCard } from "@/components/PreviewCard";
 import EmptyState from "@/components/items-list/components/EmptyState";
 import DynamicForm from "@/components/dynamic-form/DynamicForm";
@@ -47,7 +46,7 @@ class CreateSourceDialog extends React.Component {
 
   formId = uniqueId("sourceForm");
 
-  selectType = selectedType => {
+  selectType = (selectedType) => {
     this.setState({ selectedType, currentStep: StepEnum.CONFIGURE_IT });
   };
 
@@ -63,11 +62,11 @@ class CreateSourceDialog extends React.Component {
       this.setState({ savingSource: true, currentStep: StepEnum.DONE });
       this.props
         .onCreate(selectedType, values)
-        .then(data => {
+        .then((data) => {
           successCallback("Saved.");
           this.props.dialog.close({ success: true, data });
         })
-        .catch(error => {
+        .catch((error) => {
           this.setState({ savingSource: false, currentStep: StepEnum.CONFIGURE_IT });
           errorCallback(get(error, "response.data.message", "Failed saving."));
         });
@@ -78,14 +77,14 @@ class CreateSourceDialog extends React.Component {
     const { types } = this.props;
     const { searchText } = this.state;
     const filteredTypes = types.filter(
-      type => isEmpty(searchText) || includes(type.name.toLowerCase(), searchText.toLowerCase())
+      (type) => isEmpty(searchText) || includes(type.name.toLowerCase(), searchText.toLowerCase())
     );
     return (
       <div className="m-t-10">
         <Search
           placeholder="Search..."
           aria-label="Search"
-          onChange={e => this.setState({ searchText: e.target.value })}
+          onChange={(e) => this.setState({ searchText: e.target.value })}
           autoFocus
           data-test="SearchSource"
         />
@@ -93,7 +92,7 @@ class CreateSourceDialog extends React.Component {
           {isEmpty(filteredTypes) ? (
             <EmptyState className="" />
           ) : (
-            <List size="small" dataSource={filteredTypes} renderItem={item => this.renderItem(item)} />
+            <List size="small" dataSource={filteredTypes} renderItem={(item) => this.renderItem(item)} />
           )}
         </div>
       </div>
@@ -120,15 +119,6 @@ class CreateSourceDialog extends React.Component {
           )}
         </div>
         <DynamicForm id={this.formId} fields={fields} onSubmit={this.createSource} feedbackIcons hideSubmitButton />
-        {selectedType.type === "databricks" && (
-          <small>
-            By using the Databricks Data Source you agree to the Databricks JDBC/ODBC{" "}
-            <Link href="https://databricks.com/spark/odbc-driver-download" target="_blank" rel="noopener noreferrer">
-              Driver Download Terms and Conditions
-            </Link>
-            .
-          </small>
-        )}
       </div>
     );
   }
@@ -142,7 +132,8 @@ class CreateSourceDialog extends React.Component {
           imageUrl={`${imageFolder}/${item.type}.png`}
           roundedImage={false}
           data-test="PreviewItem"
-          data-test-type={item.type}>
+          data-test-type={item.type}
+        >
           <i className="fa fa-angle-double-right" aria-hidden="true" />
         </PreviewCard>
       </List.Item>
@@ -176,11 +167,13 @@ class CreateSourceDialog extends React.Component {
                   form={this.formId}
                   type="primary"
                   loading={savingSource}
-                  data-test="CreateSourceSaveButton">
+                  data-test="CreateSourceSaveButton"
+                >
                   Create
                 </Button>,
               ]
-        }>
+        }
+      >
         <div data-test="CreateSourceDialog">
           <Steps className="hidden-xs m-b-10" size="small" current={currentStep} progressDot>
             {currentStep === StepEnum.CONFIGURE_IT ? (

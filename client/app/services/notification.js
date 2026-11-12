@@ -7,8 +7,7 @@ notification.config({
 
 const simpleNotification = {};
 
-["success", "error", "info", "warning", "warn"].forEach(action => {
-  // eslint-disable-next-line arrow-body-style
+["success", "error", "info", "warning", "warn"].forEach((action) => {
   simpleNotification[action] = (message, description = null, props = null) => {
     return notification[action]({ ...props, message, description });
   };

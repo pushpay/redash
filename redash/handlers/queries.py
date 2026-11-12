@@ -4,6 +4,7 @@ from flask_login import login_required
 from flask_restful import abort
 from funcy import partial
 from sqlalchemy.orm.exc import StaleDataError
+from sqlparse.exceptions import SQLParseError
 
 from redash import models, settings
 from redash.authentication.org_resolving import current_org
@@ -44,6 +45,8 @@ order_map = {
     "-executed_at": "-query_results-retrieved_at",
     "created_by": "users-name",
     "-created_by": "-users-name",
+    "starred_at": "favorites-created_at",
+    "-starred_at": "-favorites-created_at",
 }
 
 order_results = partial(_order_results, default_order="-created_at", allowed_orders=order_map)
@@ -61,7 +64,12 @@ def format_sql_query(org_slug=None):
     arguments = request.get_json(force=True)
     query = arguments.get("query", "")
 
-    return jsonify({"query": sqlparse.format(query, **settings.SQLPARSE_FORMAT_OPTIONS)})
+    try:
+        formatted = sqlparse.format(query, **settings.SQLPARSE_FORMAT_OPTIONS)
+    except SQLParseError:
+        abort(400, message="Query is too large or too deeply nested to format.")
+
+    return jsonify({"query": formatted})
 
 
 class QuerySearchResource(BaseResource):
@@ -239,6 +247,8 @@ class QueryListResource(BaseQueryListResource):
         query = models.Query.create(**query_def)
         models.db.session.add(query)
         models.db.session.commit()
+        query.update_latest_result_by_query_hash()
+        models.db.session.commit()
 
         self.record_event({"action": "create", "object_id": query.id, "object_type": "query"})
 
@@ -362,6 +372,8 @@ class QueryResource(BaseResource):
         try:
             self.update_model(query, query_def)
             models.db.session.commit()
+            query.update_latest_result_by_query_hash()
+            models.db.session.commit()
         except StaleDataError:
             abort(409)
 
@@ -381,6 +393,10 @@ class QueryResource(BaseResource):
 
         result = QuerySerializer(q, with_visualizations=True).serialize()
         result["can_edit"] = can_modify(q, self.current_user)
+
+        if self.current_user.is_api_user():
+            # Dashboard share tokens must not reveal the query's own long-lived API key.
+            result["api_key"] = None
 
         self.record_event({"action": "view", "object_id": query_id, "object_type": "query"})
 

@@ -47,7 +47,6 @@ AlertState.defaultProps = {
   lastTriggered: null,
 };
 
-// eslint-disable-next-line react/prefer-stateless-function
 export default class AlertView extends React.Component {
   state = {
     unmuting: false,
@@ -136,7 +135,8 @@ export default class AlertView extends React.Component {
                             type="primary"
                             onClick={this.unmute}
                             loading={this.state.unmuting}
-                            className="m-t-5 m-l-5">
+                            className="m-t-5 m-l-5"
+                          >
                             Unmute
                           </Button>
                         </>
@@ -166,7 +166,7 @@ export default class AlertView extends React.Component {
 
 AlertView.propTypes = {
   alert: AlertType.isRequired,
-  queryResult: PropTypes.object, // eslint-disable-line react/forbid-prop-types,
+  queryResult: PropTypes.object,
   canEdit: PropTypes.bool.isRequired,
   onEdit: PropTypes.func.isRequired,
   menuButton: PropTypes.node.isRequired,

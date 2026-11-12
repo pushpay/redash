@@ -1,18 +1,19 @@
-import d3 from "d3";
+import * as d3 from "d3";
 import cloud from "d3-cloud";
 import { each, filter, map, min, max, sortBy, toString } from "lodash";
 import React, { useMemo, useState, useEffect } from "react";
 import resizeObserver from "@/services/resizeObserver";
 import { RendererPropTypes } from "@/visualizations/prop-types";
+import { D3Category20 } from "@/visualizations/ColorPalette";
 
 import "./renderer.less";
 
 function computeWordFrequencies(rows: any, column: any) {
   const result = {};
 
-  each(rows, row => {
+  each(rows, (row) => {
     const wordsList = toString(row[column]).split(/\s/g);
-    each(wordsList, d => {
+    each(wordsList, (d) => {
       // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       result[d] = (result[d] || 0) + 1;
     });
@@ -24,7 +25,7 @@ function computeWordFrequencies(rows: any, column: any) {
 function getWordsWithFrequencies(rows: any, wordColumn: any, frequencyColumn: any) {
   const result = {};
 
-  each(rows, row => {
+  each(rows, (row) => {
     const count = parseFloat(row[frequencyColumn]);
     if (Number.isFinite(count) && count > 0) {
       const word = toString(row[wordColumn]);
@@ -62,19 +63,18 @@ function prepareWords(rows: any, options: any) {
     }
     result = sortBy(
       map(result, (count, text) => ({ text, count })),
-      [({ count }) => -count, ({ text }) => -text.length] // "count" desc, length("text") desc
+      [({ count }: any) => -count, ({ text }: any) => -text.length] // "count" desc, length("text") desc
     );
   }
 
   // Add additional attributes
-  const counts = map(result, item => item.count);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof im... Remove this comment to see the full error message
-  const wordSize = d3.scale
-    .linear()
-    .domain([min(counts), max(counts)])
-    .range([10, 100]); // min/max word size
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof im... Remove this comment to see the full error message
-  const color = d3.scale.category20();
+  const counts = map(result, (item) => item.count);
+  const minCount = min(counts);
+  const maxCount = max(counts);
+  const wordSizeScale = d3.scaleLinear().domain([minCount, maxCount]).range([10, 100]); // min/max word size
+  // When all words have the same count, d3 v3 used the smallest size; d3 v4+ would use the middle one.
+  const wordSize = (count: number) => (minCount === maxCount ? 10 : wordSizeScale(count));
+  const color = d3.scaleOrdinal<any, string>(D3Category20);
 
   each(result, (item, index) => {
     item.size = wordSize(item.count);
@@ -104,16 +104,14 @@ function createLayout() {
   const fontFamily = window.getComputedStyle(document.body).fontFamily;
 
   return (
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     cloud()
       // make the area large enough to contain even very long words; word cloud will be placed in the center of the area
       // TODO: dimensions probably should be larger, but `d3-cloud` has some performance issues related to these values
       .size([5000, 5000])
       .padding(3)
       .font(fontFamily)
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'angle' does not exist on type 'Word'.
-      .rotate(d => d.angle)
-      .fontSize(d => d.size)
+      .rotate((d: any) => d.angle)
+      .fontSize((d: any) => d.size)
       .random(() => 0.5)
   ); // do not place words randomly - use compact layout
 }
@@ -154,7 +152,7 @@ export default function Renderer({ data, options }: any) {
     layout
       .words(prepareWords(data.rows, options))
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Word[]' is not assignable to par... Remove this comment to see the full error message
-      .on("end", w => setWords(w))
+      .on("end", (w) => setWords(w))
       .start();
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     return () => layout.on("end", null).stop();

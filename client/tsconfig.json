@@ -2,8 +2,9 @@
   "compilerOptions": {
     // Target latest version of ECMAScript.
     "target": "es2019",
-    // Search under node_modules for non-relative imports.
-    "moduleResolution": "node",
+    // Resolve modules the way webpack does.
+    "module": "esnext",
+    "moduleResolution": "bundler",
     // Process & infer types from .js files.
     "allowJs": true,
     // Don't emit; allow Babel to transform files.
@@ -17,11 +18,12 @@
     "noUnusedLocals": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": "./",
     "paths": {
       "@/*": ["./app/*"]
     },
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "typeRoots": ["../node_modules/@types"],
+    "types": ["jest", "node", "react", "react-dom"]
   },
   "include": ["app/**/*"],
   "exclude": ["dist"]

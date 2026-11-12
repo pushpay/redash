@@ -1,5 +1,5 @@
 import { map, trim, uniq, compact } from "lodash";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import Select from "antd/lib/select";
 import Modal from "antd/lib/modal";
@@ -9,20 +9,22 @@ function EditTagsDialog({ dialog, tags, getAvailableTags }) {
   const [availableTags, setAvailableTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [values, setValues] = useState(() => uniq(map(tags, trim))); // lazy evaluate
-  const [selectRef, setSelectRef] = useState(null);
+  // A ref object rather than a state setter: antd's Select passes a new ref value on every
+  // render, which would re-render this component forever.
+  const selectRef = useRef(null);
 
   // Select is initially disabled, so autoFocus prop cannot make it focused.
   // Solution is to pass focus to the select when available tags are loaded and
   // select becomes enabled.
   useEffect(() => {
-    if (selectRef && !isLoading) {
-      selectRef.focus();
+    if (selectRef.current && !isLoading) {
+      selectRef.current.focus();
     }
-  }, [selectRef, isLoading]);
+  }, [isLoading]);
 
   useEffect(() => {
     let isCancelled = false;
-    getAvailableTags().then(availableTags => {
+    getAvailableTags().then((availableTags) => {
       if (!isCancelled) {
         setAvailableTags(uniq(compact(map(availableTags, trim))));
         setIsLoading(false);
@@ -39,17 +41,19 @@ function EditTagsDialog({ dialog, tags, getAvailableTags }) {
       onOk={() => dialog.close(values)}
       title="Add/Edit Tags"
       className="shortModal"
-      wrapProps={{ "data-test": "EditTagsDialog" }}>
+      wrapProps={{ "data-test": "EditTagsDialog" }}
+    >
       <Select
-        ref={setSelectRef}
+        ref={selectRef}
         mode="tags"
         className="w-100"
         placeholder="Add some tags..."
         defaultValue={values}
-        onChange={v => setValues(compact(map(v, trim)))}
+        onChange={(v) => setValues(compact(map(v, trim)))}
         disabled={isLoading}
-        loading={isLoading}>
-        {map(availableTags, tag => (
+        loading={isLoading}
+      >
+        {map(availableTags, (tag) => (
           <Select.Option key={tag}>{tag}</Select.Option>
         ))}
       </Select>

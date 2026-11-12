@@ -43,9 +43,23 @@ type OwnProps = {
   addonBefore?: React.ReactNode;
   addonAfter?: React.ReactNode;
   onChange?: (...args: any[]) => any;
+  "data-test"?: string;
 };
 
-type Props = OwnProps & typeof ColorPicker.defaultProps;
+const colorPickerDefaultProps = {
+  color: "#FFFFFF",
+  placement: "top",
+  presetColors: null,
+  presetColumns: 8,
+  interactive: false,
+  triggerProps: {} as Record<string, any>,
+  children: null,
+  addonBefore: null,
+  addonAfter: null,
+  onChange: () => {},
+};
+
+type Props = OwnProps;
 
 export default function ColorPicker({
   color,
@@ -58,6 +72,7 @@ export default function ColorPicker({
   triggerProps,
   addonBefore,
   addonAfter,
+  "data-test": dataTest,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const validatedColor = useMemo(() => validateColor(color), [color]);
@@ -105,7 +120,7 @@ export default function ColorPicker({
   }, [validatedColor, visible]);
 
   return (
-    <span className="color-picker-wrapper">
+    <span className="color-picker-wrapper" data-test={dataTest}>
       {addonBefore}
       <Popover
         arrowPointAtCenter
@@ -123,15 +138,13 @@ export default function ColorPicker({
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null | undefined' is not assignable... Remove this comment to see the full error message
               color: chooseTextColorForBackground(currentColor),
             }}
-            actions={actions}>
+            actions={actions}
+          >
             <ColorInput
-              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'never'.
               color={currentColor}
               presetColors={presetColors}
               presetColumns={presetColumns}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(newColor: any) => void' is not assignable t... Remove this comment to see the full error message
               onChange={handleInputChange}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '() => void' is not assignable to type 'never... Remove this comment to see the full error message
               onPressEnter={handleApply}
             />
           </Card>
@@ -139,14 +152,14 @@ export default function ColorPicker({
         trigger="click"
         placement={placement}
         visible={visible}
-        onVisibleChange={setVisible}>
+        onVisibleChange={setVisible}
+      >
         {children || (
           <Swatch
             color={validatedColor}
             size={30}
-            {...triggerProps}
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type 'never... Remove this comment to see the full error message
-            className={cx("color-picker-trigger", triggerProps.className)}
+            {...((triggerProps as any) || {})}
+            className={cx("color-picker-trigger", (triggerProps as any)?.className)}
           />
         )}
       </Popover>
@@ -155,18 +168,7 @@ export default function ColorPicker({
   );
 }
 
-ColorPicker.defaultProps = {
-  color: "#FFFFFF",
-  placement: "top",
-  presetColors: null,
-  presetColumns: 8,
-  interactive: false,
-  triggerProps: {},
-  children: null,
-  addonBefore: null,
-  addonAfter: null,
-  onChange: () => {},
-};
+ColorPicker.defaultProps = colorPickerDefaultProps;
 
 ColorPicker.Input = ColorInput;
 ColorPicker.Swatch = Swatch;

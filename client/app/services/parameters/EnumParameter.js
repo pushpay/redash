@@ -36,7 +36,7 @@ class EnumParameter extends Parameter {
       const separator = get(this.multiValuesOptions, "separator", ",");
       const prefix = get(this.multiValuesOptions, "prefix", "");
       const suffix = get(this.multiValuesOptions, "suffix", "");
-      const parameterValues = map(this.value, v => `${prefix}${v}${suffix}`);
+      const parameterValues = map(this.value, (v) => `${prefix}${v}${suffix}`);
       return join(parameterValues, separator);
     }
     return this.value;
@@ -63,7 +63,7 @@ class EnumParameter extends Parameter {
         try {
           const valueFromJson = JSON.parse(query[key]);
           this.setValue(isArray(valueFromJson) ? valueFromJson : query[key]);
-        } catch (e) {
+        } catch {
           this.setValue(query[key]);
         }
       } else {

@@ -12,7 +12,10 @@ export default function PasswordLoginSettings(props) {
   const { settings, values, onChange, loading } = props;
 
   const isTheOnlyAuthMethod =
-    !clientConfig.googleLoginEnabled && !clientConfig.ldapLoginEnabled && !values.auth_saml_enabled;
+    !clientConfig.oidcLoginEnabled &&
+    !clientConfig.googleLoginEnabled &&
+    !clientConfig.ldapLoginEnabled &&
+    !values.auth_saml_enabled;
 
   return (
     <DynamicComponent name="OrganizationSettings.PasswordLoginSettings" {...props}>
@@ -31,12 +34,14 @@ export default function PasswordLoginSettings(props) {
           <Checkbox
             checked={values.auth_password_login_enabled}
             disabled={isTheOnlyAuthMethod}
-            onChange={e => onChange({ auth_password_login_enabled: e.target.checked })}>
+            onChange={(e) => onChange({ auth_password_login_enabled: e.target.checked })}
+          >
             <Tooltip
               title={
                 isTheOnlyAuthMethod ? "Password login can be disabled only if another login method is enabled." : null
               }
-              placement="right">
+              placement="right"
+            >
               Password Login Enabled
             </Tooltip>
           </Checkbox>

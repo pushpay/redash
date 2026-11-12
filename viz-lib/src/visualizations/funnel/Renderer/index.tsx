@@ -16,7 +16,6 @@ function generateRowKeyPrefix() {
 
 export default function Renderer({ data, options }: any) {
   const funnelData = useMemo(() => prepareData(data.rows, options), [data, options]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const rowKeyPrefix = useMemo(() => generateRowKeyPrefix(), [funnelData]);
 
   const formatValue = useMemo(() => createNumberFormatter(options.numberFormat), [options.numberFormat]);
@@ -40,7 +39,7 @@ export default function Renderer({ data, options }: any) {
     }
 
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-    const maxToPrevious = maxBy(funnelData, d => (isFinite(d.pctPrevious) ? d.pctPrevious : 0)).pctPrevious;
+    const maxToPrevious = maxBy(funnelData, (d) => (isFinite(d.pctPrevious) ? d.pctPrevious : 0)).pctPrevious;
     return [
       {
         title: options.stepCol.displayAs,

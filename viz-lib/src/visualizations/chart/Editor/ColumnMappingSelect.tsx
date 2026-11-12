@@ -20,17 +20,28 @@ const SwappedMappingTypes = {
 type OwnProps = {
   value?: string | string[];
   availableColumns?: string[];
-  type?: any; // TODO: PropTypes.oneOf(keys(MappingTypes))
+  type?: string; // one of the MappingTypes keys
   onChange?: (...args: any[]) => any;
+  areAxesSwapped?: boolean;
 };
 
-type Props = OwnProps & typeof ColumnMappingSelect.defaultProps;
+const columnMappingSelectDefaultProps = {
+  value: null,
+  availableColumns: [],
+  type: null,
+  onChange: () => {},
+};
+
+type Props = OwnProps;
 
 export default function ColumnMappingSelect({ value, availableColumns, type, onChange, areAxesSwapped }: Props) {
-  const options = sortBy(filter(uniq(flatten([availableColumns, value])), v => isString(v) && v !== ""));
+  const options = sortBy(filter(uniq(flatten([availableColumns, value])), (v) => isString(v) && v !== ""));
 
   // this swaps the ui, as the data will be swapped on render
-  const { label, multiple } = !areAxesSwapped ? MappingTypes[type] : SwappedMappingTypes[type];
+  const mappingTypes: Record<string, { label: string; multiple?: boolean }> = !areAxesSwapped
+    ? MappingTypes
+    : SwappedMappingTypes;
+  const { label, multiple } = mappingTypes[type!];
 
   return (
     // @ts-expect-error ts-migrate(2745) FIXME: This JSX tag's 'children' prop expects type 'never... Remove this comment to see the full error message
@@ -44,8 +55,9 @@ export default function ColumnMappingSelect({ value, availableColumns, type, onC
         placeholder={multiple ? "Choose columns..." : "Choose column..."}
         value={value || undefined}
         // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
-        onChange={(column: any) => onChange(column || null, type)}>
-        {map(options, c => (
+        onChange={(column: any) => onChange(column || null, type)}
+      >
+        {map(options, (c) => (
           // @ts-expect-error ts-migrate(2339) FIXME: Property 'Option' does not exist on type '({ class... Remove this comment to see the full error message
           <Select.Option key={c} value={c} data-test={`Chart.ColumnMapping.${type}.${c}`}>
             {c}
@@ -57,11 +69,6 @@ export default function ColumnMappingSelect({ value, availableColumns, type, onC
   );
 }
 
-ColumnMappingSelect.defaultProps = {
-  value: null,
-  availableColumns: [],
-  type: null,
-  onChange: () => {},
-};
+ColumnMappingSelect.defaultProps = columnMappingSelectDefaultProps;
 
 ColumnMappingSelect.MappingTypes = MappingTypes;
