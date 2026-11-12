@@ -20,6 +20,8 @@ from redash.query_runner import (
     JobTimeoutException,
     register,
 )
+from redash.settings import QUERY_RESULTS_MAX_ROWS, QUERY_RESULTS_MAX_ROWS_CONFLUENCE
+from redash.utils import json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +211,7 @@ class PostgreSQL(BaseSQLQueryRunner):
         results, error = self.run_query(query, None)
 
         if error is not None:
-            self._handle_run_query_error(error)
+            raise Exception(f"Failed getting schema - {str(error)}")
 
         build_schema(results, schema)
 
@@ -279,11 +281,17 @@ class PostgreSQL(BaseSQLQueryRunner):
             _wait(connection)
 
             if cursor.description is not None:
-                columns = self.fetch_columns([(i[0], types_map.get(i[1], None)) for i in cursor.description])
-                rows = [dict(zip((column["name"] for column in columns), row)) for row in cursor]
+                if QUERY_RESULTS_MAX_ROWS != -1 and cursor.rowcount > QUERY_RESULTS_MAX_ROWS:
+                    data = None
+                    error = "Query returned too many rows ({0}) - maximum allowed rows is {1}".format(
+                        cursor.rowcount, QUERY_RESULTS_MAX_ROWS
+                    )
+                else:
+                    columns = self.fetch_columns([(i[0], types_map.get(i[1], None)) for i in cursor.description])
+                    rows = [dict(zip((column["name"] for column in columns), row)) for row in cursor]
 
-                data = {"columns": columns, "rows": rows}
-                error = None
+                    data = {"columns": columns, "rows": rows}
+                    error = None
             else:
                 error = "Query completed but it returned no data."
                 data = None

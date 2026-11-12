@@ -182,10 +182,12 @@ def refresh_schema(data_source_id):
             time.time() - start_time,
         )
         statsd_client.incr("refresh_schema.timeout")
-    except NotSupported:
-        logger.debug("Datasource %s does not support schema refresh", ds.name)
-    except Exception:
-        logger.warning("Failed refreshing schema for the data source: %s", ds.name, exc_info=1)
+    except Exception as ex:
+        logger.warning(
+            u"Failed refreshing schema for the data source: %s",
+            ds.name,
+            exc_info=ex
+        )
         statsd_client.incr("refresh_schema.error")
         logger.info(
             "task=refresh_schema state=failed ds_id=%s runtime=%.2f",
